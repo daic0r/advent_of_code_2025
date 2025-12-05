@@ -9,7 +9,7 @@ defmodule Aoc2025.Day5 do
   def merge_ranges({min1, max1}, {min2, max2}) do
     cond do
       min1 < min2 and max1 < min2 -> [{min1, max1}, {min2, max2}]
-      min1 > max2 and max1 > max2 -> [{min2, max2}, {min2, max2}]
+      min1 > max2 and max1 > max2 -> [{min2, max2}, {min1, max1}]
       min1 <= min2 and max1 >= max2 -> [{min1, max1}]
       min1 <= max2 and min1 >= min2 -> [{min2, max(max1, max2)}]
       max1 <= max2 and max1 >= min2 -> [{min(min1, min2), max2}]
