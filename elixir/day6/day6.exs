@@ -29,21 +29,6 @@ defmodule Aoc2025.Day6 do
     part1(input, num_problems, idx + 1, acc + res)
   end
   
-
-  # Flip columns and rows
-  def rotate(input, len, idx \\ 0, columns \\ [])
-  def rotate(_input, len, len, columns) do
-    # We prepended to the list below, so reverse to get the right order here
-    Enum.reverse(columns)
-  end
-  def rotate(input, len, idx, columns) do
-    col = input
-      |> Enum.drop(idx)
-      |> Enum.chunk_every(1, len+1)
-      |> List.flatten
-
-    rotate(input, len, idx + 1, [col | columns])
-  end
     
   def part2(input) do
     {line_len, _} = :binary.match(input, "\n")
@@ -57,7 +42,9 @@ defmodule Aoc2025.Day6 do
 
     input
       |> String.graphemes
-      |> rotate(line_len)
+      |> Enum.chunk_every(line_len+1)
+      |> Enum.zip
+      |> Enum.map(&Tuple.to_list/1)
       |> Enum.chunk_by(fn col -> Enum.all?(col, & &1 == " ") end)
       |> Enum.filter(& length(&1) > 1) # Filter out the separating columns
       |> Enum.map(fn cols ->
@@ -70,6 +57,8 @@ defmodule Aoc2025.Day6 do
           # then stringify the column list and convert into an integer
           {{op_fn, init}, 
             cols 
+              # Filter out last column
+              |> Enum.filter(fn rows -> !Enum.any?(rows, & &1 == "\n") end)
               |> Enum.map(fn rows -> 
                 rows
                   |> Enum.take(nums_per_problem)
