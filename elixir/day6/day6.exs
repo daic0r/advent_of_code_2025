@@ -50,8 +50,8 @@ defmodule Aoc2025.Day6 do
       |> Enum.map(fn cols ->
           op = cols |> hd |> List.last
           {op_fn, init} = case op do
-            "+" -> {fn a, b -> a + b end, 0}
-            "*" -> {fn a, b -> a * b end, 1}
+            "+" -> {&+/2, 0}
+            "*" -> {&*/2, 1}
           end
           # Drop the last row that only contains the operator, remove empty columns,
           # then stringify the column list and convert into an integer
