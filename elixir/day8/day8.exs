@@ -21,52 +21,30 @@ end
 defmodule Aoc2025.Day8 do
   import Aoc2025.Day8.Vector
 
-  def gen_distances(input, idx \\ 0, out \\ %{})
-  def gen_distances(input, idx, out) when idx == length(input) do
-    out 
-  end
-  def gen_distances(input, idx, out) do
-    [head | tail] = input |> Enum.drop(idx)
-    distances = for vec <- tail, into: %{}, do: {vec, dist(head, vec)}
-    gen_distances(input, idx + 1, Map.put(out, head, distances))
-  end
-
-  def gen_distances2(input, limit, out \\ :orddict.new())
-  def gen_distances2([], _limit, out) do
+  def gen_distances(input, out \\ :ets.new(:day, [:ordered_set]))
+  def gen_distances([], out) do
     out
   end
-  def gen_distances2(input, limit, out) do
+  def gen_distances(input, out) do
     [head | tail] = input
-    new_out = Enum.reduce(tail, out, fn vec, stor ->
-      d = dist(head, vec)
-      :orddict.store(d, {head, vec}, stor)
-    end)
-    new_out = case limit do
-      :infinity -> new_out
-      n -> new_out |> Enum.take(limit)
-    end
-    gen_distances2(tail, limit, new_out)
-  end
 
-  def get_distance(distances, a, b) do
-    dist = Map.get(Map.get(distances, a), b) 
-    if dist do
-      dist   
-    else
-      Map.get(Map.get(distances, b), a)
-    end
+    Enum.each(tail, fn vec ->
+      d = dist(head, vec)
+      :ets.insert(out, {d, {head, vec}})
+    end)
+
+    gen_distances(tail, out)
   end
 
   def part1(distances, out_circuits, num_merges, idx \\ 0)
-  def part1(distances, out_circuits, num_merges, num_merges) do
+  def part1(_distances, out_circuits, num_merges, num_merges) do
     out_circuits
       |> Enum.sort_by(& length(&1), :desc)
       |> Enum.take(3)
-      |> IO.inspect(limit: :infinity)
       |> Enum.product_by(& length(&1))
   end
   def part1(distances, out_circuits, num_merges, idx) do
-    {{vec_a, vec_b}, distances} = :orddict.take(elem(hd(distances), 0), distances)
+    [{_, {vec_a, vec_b}}] = :ets.take(distances, :ets.first(distances))
     circ_a = Enum.find(out_circuits, fn circuit -> vec_a in circuit and vec_b not in circuit end)
     circ_b = Enum.find(out_circuits, fn circuit -> vec_b in circuit and vec_a not in circuit end)
 
@@ -82,50 +60,18 @@ defmodule Aoc2025.Day8 do
       out_circuits
     end
 
-    # out_circuits = out_circuits
-    #   |> Enum.map(fn circuit ->
-    #     circuit = if vec_a in circuit and vec_b not in circuit do
-    #       [vec_b | circuit]
-    #     else
-    #       circuit
-    #     end
-    #     circuit = if vec_b in circuit and vec_a not in circuit do
-    #       [vec_a | circuit]
-    #     else
-    #       circuit
-    #     end
-    #     circuit
-    #   end)
-    # |> Enum.map(fn circuit ->
-    #   circuit
-    #     |> Enum.sort_by(& &1, fn %Vector{ x: x1, y: y1, z: z1 }, %Vector{ x: x2, y: y2, z: z2 } ->
-    #       x1 < x2 or (x1 == x2 and y1 < y2) or (x1 == x2 and y1 == y2 and z1 < z2) 
-    #     end)
-    #   end)
-    # |> Enum.uniq
-    # #|> IO.inspect(label: "PASS")
-    # IO.puts "=========="
-
     part1(distances, out_circuits, num_merges, idx + 1)
   end
 
   
-  def part2(distances, out_circuits)
-  # def part2(distances, out_circuits) when length(out_circuits) == 1 do
-  #   out_circuits
-  #     |> Enum.sort_by(& length(&1), :desc)
-  #     |> Enum.take(3)
-  #     |> IO.inspect(limit: :infinity)
-  #     |> Enum.product_by(& length(&1))
-  # end
   def part2(distances, out_circuits) do
-    {{vec_a, vec_b}, distances} = :orddict.take(elem(hd(distances), 0), distances)
+    [{_, {vec_a, vec_b}}] = :ets.take(distances, :ets.first(distances))
     circ_a = Enum.find(out_circuits, fn circuit -> vec_a in circuit and vec_b not in circuit end)
     circ_b = Enum.find(out_circuits, fn circuit -> vec_b in circuit and vec_a not in circuit end)
 
     # Merge the two circuits if the two points aren't already part of the same
     # circuit
-    out_circuits = if circ_a != nil and circ_b != nil do
+    if circ_a != nil and circ_b != nil do
       merged = circ_a ++ circ_b
 
       out_circuits = out_circuits |> Enum.reject(& &1 == circ_b or &1 == circ_a)
@@ -140,7 +86,6 @@ defmodule Aoc2025.Day8 do
     else
         part2(distances, out_circuits)
     end
-
   end
 end
 
@@ -177,11 +122,12 @@ input = input
 circuits = input
   |> Enum.map(fn vec -> [vec] end)
 
-distances = Aoc2025.Day8.gen_distances2(input, 1000) |> IO.inspect(limit: :infinity)
+distances = Aoc2025.Day8.gen_distances(input)
 
 sol1 = Aoc2025.Day8.part1(distances, circuits, 1000)
 IO.puts "Part 1: #{sol1}"
 
-distances = Aoc2025.Day8.gen_distances2(input, 8000)
+distances = Aoc2025.Day8.gen_distances(input)
+
 sol2 = Aoc2025.Day8.part2(distances, circuits)
 IO.puts "Part 2: #{sol2}"
