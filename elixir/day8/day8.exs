@@ -39,9 +39,10 @@ defmodule Aoc2025.Day8 do
   def part1(distances, out_circuits, num_merges, idx \\ 0)
   def part1(_distances, out_circuits, num_merges, num_merges) do
     out_circuits
-      |> Enum.sort_by(& length(&1), :desc)
+      |> MapSet.to_list
+      |> Enum.sort_by(& MapSet.size(&1), :desc)
       |> Enum.take(3)
-      |> Enum.product_by(& length(&1))
+      |> Enum.product_by(& MapSet.size(&1))
   end
   def part1(distances, out_circuits, num_merges, idx) do
     [{_, {vec_a, vec_b}}] = :ets.take(distances, :ets.first(distances))
@@ -51,11 +52,11 @@ defmodule Aoc2025.Day8 do
     # Merge the two circuits if the two points aren't already part of the same
     # circuit
     out_circuits = if circ_a != nil and circ_b != nil do
-      merged = circ_a ++ circ_b
+      out_circuits = MapSet.delete(out_circuits, circ_a)
+      out_circuits = MapSet.delete(out_circuits, circ_b)
 
-      out_circuits = out_circuits |> Enum.reject(& &1 == circ_b or &1 == circ_a)
-
-      [merged | out_circuits]
+      merged = MapSet.union(circ_a, circ_b)
+      MapSet.put(out_circuits, merged)
     else
       out_circuits
     end
@@ -72,13 +73,14 @@ defmodule Aoc2025.Day8 do
     # Merge the two circuits if the two points aren't already part of the same
     # circuit
     if circ_a != nil and circ_b != nil do
-      merged = circ_a ++ circ_b
 
-      out_circuits = out_circuits |> Enum.reject(& &1 == circ_b or &1 == circ_a)
+      out_circuits = MapSet.delete(out_circuits, circ_a)
+      out_circuits = MapSet.delete(out_circuits, circ_b)
 
-      out_circuits = [merged | out_circuits]
+      merged = MapSet.union(circ_a, circ_b)
+      out_circuits = MapSet.put(out_circuits, merged)
 
-      if length(out_circuits) == 1 do
+      if MapSet.size(out_circuits) == 1 do
         vec_a.x * vec_b.x
       else
         part2(distances, out_circuits)
@@ -120,7 +122,8 @@ input = input
 
 # Every vector is in its own circuit in the beginning
 circuits = input
-  |> Enum.map(fn vec -> [vec] end)
+  |> Enum.map(fn vec -> MapSet.new()|> MapSet.put(vec) end)
+  |> Enum.into(MapSet.new())
 
 distances = Aoc2025.Day8.gen_distances(input)
 
